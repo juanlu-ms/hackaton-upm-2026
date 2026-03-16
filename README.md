@@ -8,7 +8,7 @@ A continuación se detallan los endpoints disponibles para los alumnos y ejemplo
 
 ### 1. Autenticación
 
-Para acceder a la mayoría de los endpoints, es necesario registrarse e iniciar sesión para obtener un **Bearer Token**.
+Para acceder a los endpoints de `/weather` y `prompt`, es necesario registrarse e iniciar sesión para obtener un **Bearer Token**.
 
 #### Registro
 Crea una cuenta para tu equipo.
