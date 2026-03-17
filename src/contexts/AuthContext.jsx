@@ -76,6 +76,13 @@ export function AuthProvider({ children }) {
             options: { data: metadata },
         })
         if (error) throw error
+        
+        // If auto-confirm is enabled, or if it bypassed confirmation, we might get a session immediately.
+        if (data?.session) {
+            setUser(data.session.user)
+            await fetchProfile(data.session.user.id)
+        }
+        
         return data
     }
 
@@ -122,12 +129,11 @@ export function AuthProvider({ children }) {
     async function updateProfile(profileData) {
         if (!user) throw new Error('No user logged in')
 
+        // Use .update() to not overwrite fields initialized by the database trigger (like full_name)
         const { data, error } = await supabase
             .from('profiles')
-            .upsert(
-                { user_id: user.id, ...profileData, updated_at: new Date().toISOString() },
-                { onConflict: 'user_id' }
-            )
+            .update({ ...profileData, updated_at: new Date().toISOString() })
+            .eq('user_id', user.id)
             .select()
             .single()
 

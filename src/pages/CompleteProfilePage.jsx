@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Navigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { MapPin, Home, Heart, Phone, ArrowRight } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -42,6 +42,11 @@ export default function CompleteProfilePage() {
     const [necesidades, setNecesidades] = useState(profile?.necesidades_especiales || [])
     const [phone, setPhone] = useState(profile?.phone || '')
     const [loading, setLoading] = useState(false)
+
+    // Protect this page from unauthenticated users
+    if (!user) {
+        return <Navigate to="/login" replace />
+    }
 
     function toggleNecesidad(value) {
         setNecesidades((prev) =>

@@ -28,12 +28,20 @@ export default function RegisterPage() {
 
         setLoading(true)
         try {
-            await signUp(email, password, {
+            const result = await signUp(email, password, {
                 full_name: fullName,
                 role: 'citizen',
             })
-            toast.success('¡Cuenta creada! Completa tu perfil.')
-            navigate('/complete-profile')
+            
+            if (result?.session) {
+                // User is automatically logged in
+                toast.success('¡Cuenta creada! Completa tu perfil.')
+                navigate('/complete-profile')
+            } else {
+                // Email confirmation required or no session provided yet
+                toast.success('¡Cuenta creada! Revisa tu correo electrónico para confirmar la cuenta si es necesario, o inicia sesión.', { duration: 6000 })
+                navigate('/login')
+            }
         } catch (err) {
             toast.error(err.message || 'Error al registrarse')
         } finally {
