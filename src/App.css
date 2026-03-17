@@ -779,6 +779,64 @@
   color: var(--text-primary);
 }
 
+.recommendation-markdown {
+  display: block;
+}
+
+.recommendation-markdown h3 {
+  margin: 16px 0 8px;
+  font-size: 1rem;
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text-primary);
+}
+
+.recommendation-markdown p + p {
+  margin-top: 10px;
+}
+
+.recommendation-markdown p {
+  margin: 0;
+}
+
+.recommendation-markdown ul,
+.recommendation-markdown ol {
+  margin: 8px 0 0 20px;
+  padding-left: 18px;
+}
+
+.recommendation-markdown ol li,
+.recommendation-markdown ul li {
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  font-weight: 400;
+}
+
+.recommendation-markdown blockquote {
+  margin: 12px 0 0;
+  padding: 0 0 0 12px;
+  border-left: 3px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.recommendation-markdown li + li {
+  margin-top: 6px;
+}
+
+@media (max-width: 768px) {
+  .recommendation-content {
+    padding: 16px;
+  }
+}
+
 /* Alerts Banner */
 .alerts-section {
   margin-bottom: 24px;

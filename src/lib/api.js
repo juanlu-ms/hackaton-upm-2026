@@ -46,41 +46,45 @@ export async function sendPrompt(systemPrompt, userPrompt) {
  * Build a system prompt for the emergency expert AI.
  */
 export function buildSystemPrompt() {
-    return `Eres un experto en gestión de emergencias climáticas y protección civil en España. Tu misión es proporcionar instrucciones de seguridad PERSONALIZADAS y ESPECÍFICAS basadas en el perfil del ciudadano y las condiciones meteorológicas actuales.
+    return `Eres un asistente de emergencias climáticas. Responde SIEMPRE en español usando markdown simple, corto y limpio.
 
-REGLAS ESTRICTAS:
-1. Adapta tus instrucciones al TIPO DE VIVIENDA del usuario:
-   - Sótano: prioriza evacuación vertical, riesgo de inundación extremo
-   - Planta baja: riesgo alto de inundación, preparar evacuación
-   - Piso alto: generalmente más seguro ante inundaciones, pero atención a vientos
-   - Casa de campo: aislamiento, riesgo de riadas y accesos cortados
-2. Ten en cuenta las NECESIDADES ESPECIALES:
-   - Silla de ruedas/movilidad reducida: rutas accesibles, ayuda necesaria
-   - Persona dependiente: plan de evacuación asistida
-   - Mascotas: incluir en plan de evacuación
-   - Discapacidad visual/auditiva: alertas adaptadas
-3. Sé CLARO, DIRECTO y prioriza la seguridad vital
-4. Da instrucciones PASO A PASO, de más urgente a menos urgente
-5. Indica cuándo llamar al 112
-6. Responde SIEMPRE en español
-7. Usa formato con viñetas y secciones claras`
+Usa EXACTAMENTE esta estructura:
+
+### 🚨 Prioridad
+**[ALTA/MEDIA/BAJA]**: [una frase breve con el riesgo principal]
+
+### ✅ Qué hacer ahora
+1. [acción inmediata]
+2. [segunda acción]
+3. [tercera acción]
+
+### 📱 Contactos
+- **112** Emergencias
+- **1006** Protección Civil
+
+> [una frase final corta para mantenerse atento]
+
+Reglas:
+- máximo 90 palabras
+- sin introducciones ni conclusiones extra
+- sin texto fuera de esa estructura
+- cada punto debe ser muy corto y directo`
 }
 
 /**
  * Build a personalized user prompt with weather data and profile.
  */
 export function buildUserPrompt(weatherData, profile) {
-    const necesidades = profile.necesidades_especiales?.length
+    const necesidades = profile?.necesidades_especiales?.length
         ? profile.necesidades_especiales.join(', ')
-        : 'Ninguna especificada'
+        : null
 
-    return `DATOS METEOROLÓGICOS ACTUALES:
-${JSON.stringify(weatherData, null, 2)}
+    const perfil = [
+        profile?.tipo_vivienda && `Vivienda: ${profile.tipo_vivienda}`,
+        necesidades && `Necesidades: ${necesidades}`,
+    ].filter(Boolean).join(' | ')
 
-PERFIL DEL CIUDADANO:
-- Provincia: ${profile.provincia || 'No especificada'}
-- Tipo de vivienda: ${profile.tipo_vivienda || 'No especificado'}
-- Necesidades especiales: ${necesidades}
-
-Basándote en estos datos meteorológicos y el perfil específico de este ciudadano, ¿qué precauciones y acciones concretas debe tomar esta persona AHORA MISMO para proteger su vida y la de sus dependientes?`
+    return `Datos meteorológicos: ${JSON.stringify(weatherData)}
+${perfil ? `Perfil: ${perfil}` : ''}
+Genera el resumen siguiendo el formato indicado.`
 }
