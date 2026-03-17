@@ -41,9 +41,6 @@ export default function CompleteProfilePage() {
     const [tipoVivienda, setTipoVivienda] = useState(profile?.tipo_vivienda || '')
     const [necesidades, setNecesidades] = useState(profile?.necesidades_especiales || [])
     const [phone, setPhone] = useState(profile?.phone || '')
-    const [fullName, setFullName] = useState(
-        profile?.full_name || user?.user_metadata?.full_name || ''
-    )
     const [loading, setLoading] = useState(false)
 
     function toggleNecesidad(value) {
@@ -57,7 +54,7 @@ export default function CompleteProfilePage() {
     async function handleSubmit(e) {
         e.preventDefault()
 
-        if (!provincia || !tipoVivienda || !fullName) {
+        if (!provincia || !tipoVivienda) {
             toast.error('Por favor, completa los campos obligatorios')
             return
         }
@@ -65,7 +62,6 @@ export default function CompleteProfilePage() {
         setLoading(true)
         try {
             await updateProfile({
-                full_name: fullName,
                 provincia,
                 tipo_vivienda: tipoVivienda,
                 necesidades_especiales: necesidades,
@@ -92,20 +88,6 @@ export default function CompleteProfilePage() {
                 </div>
 
                 <form className="profile-form" onSubmit={handleSubmit}>
-                    {/* Full Name */}
-                    <div className="form-group">
-                        <label htmlFor="cp-name">
-                            Nombre Completo <span className="required">*</span>
-                        </label>
-                        <input
-                            id="cp-name"
-                            type="text"
-                            placeholder="Tu nombre completo"
-                            value={fullName}
-                            onChange={(e) => setFullName(e.target.value)}
-                            required
-                        />
-                    </div>
 
                     {/* Provincia */}
                     <div className="form-group">
