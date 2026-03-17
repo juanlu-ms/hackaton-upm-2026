@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 
 const AuthContext = createContext(null)
@@ -7,6 +7,7 @@ export function AuthProvider({ children }) {
     const [user, setUser] = useState(null)
     const [profile, setProfile] = useState(null)
     const [loading, setLoading] = useState(true)
+    const initialSessionHandledRef = useRef(false)
 
     /** Fetch the user's profile from Supabase */
     async function fetchProfile(userId) {
@@ -23,41 +24,57 @@ export function AuthProvider({ children }) {
         return data
     }
 
+    /** Helper function to apply session data to state */
+    async function applySession(session) {
+        setUser(session?.user ?? null)
+        if (session?.user) {
+            await fetchProfile(session.user.id)
+        } else {
+            setProfile(null)
+        }
+    }
+
     useEffect(() => {
         let subscription = null
 
-        // Safety net: if loading never resolves (network error, etc.), force it off after 10s
+        // Safety net: force loading off after 10s if network fails
         const safetyTimeout = setTimeout(() => {
             setLoading(false)
         }, 10000)
 
-        try {
-            // onAuthStateChange fires INITIAL_SESSION immediately on mount,
-            // so we don't need a separate getSession() call. This avoids the
-            // race condition where init() and the listener both toggle loading.
-            const { data } = supabase.auth.onAuthStateChange(
-                async (_event, session) => {
-                    setUser(session?.user ?? null)
-                    try {
-                        if (session?.user) {
-                            await fetchProfile(session.user.id)
-                        } else {
-                            setProfile(null)
+        async function initAuth() {
+            try {
+                // 1. Get initial session
+                const { data: { session } } = await supabase.auth.getSession()
+                await applySession(session)
+                initialSessionHandledRef.current = true
+            } catch (err) {
+                console.warn('Auth init error:', err.message)
+            } finally {
+                clearTimeout(safetyTimeout)
+                setLoading(false)
+            }
+
+            // 2. Listen for auth changes
+            try {
+                const { data } = supabase.auth.onAuthStateChange(
+                    async (event, session) => {
+                        // Avoid redundant processing of the initial session if initAuth already did it
+                        if (event === 'INITIAL_SESSION' && initialSessionHandledRef.current) {
+                            return
                         }
-                    } catch (err) {
-                        console.error('Error fetching profile in auth change:', err.message)
-                    } finally {
-                        clearTimeout(safetyTimeout)
+
+                        await applySession(session)
                         setLoading(false)
                     }
-                }
-            )
-            subscription = data?.subscription
-        } catch (err) {
-            console.warn('Auth listener setup error:', err.message)
-            clearTimeout(safetyTimeout)
-            setLoading(false)
+                )
+                subscription = data?.subscription
+            } catch (err) {
+                console.error('Auth listener error:', err.message)
+            }
         }
+
+        initAuth()
 
         return () => {
             clearTimeout(safetyTimeout)
@@ -74,10 +91,8 @@ export function AuthProvider({ children }) {
         })
         if (error) throw error
         
-        // If auto-confirm is enabled, or if it bypassed confirmation, we might get a session immediately.
         if (data?.session) {
-            setUser(data.session.user)
-            await fetchProfile(data.session.user.id)
+            await applySession(data.session)
         }
         
         return data
@@ -117,7 +132,6 @@ export function AuthProvider({ children }) {
     async function updateProfile(profileData) {
         if (!user) throw new Error('No user logged in')
 
-        // Use .update() to not overwrite fields initialized by the database trigger (like full_name)
         const { data, error } = await supabase
             .from('profiles')
             .update({ ...profileData, updated_at: new Date().toISOString() })
@@ -130,7 +144,7 @@ export function AuthProvider({ children }) {
         return data
     }
 
-    /** Check if profile is complete (has required fields filled) */
+    /** Check if profile is complete */
     function isProfileComplete() {
         if (!profile) return false
         return !!(profile.provincia && profile.tipo_vivienda)

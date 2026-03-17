@@ -142,14 +142,22 @@ export default function DashboardPage() {
             setWeather(data)
             setWeatherAlert(buildWeatherAlert(data))
 
-            // Save to history
+            const createdAt = new Date().toISOString()
             await supabase.from('weather_logs').insert({
                 user_id: user.id,
                 weather_data: data,
                 disaster: false,
             })
-            loadHistory()
-            // Auto-generate AI recommendation right after loading weather
+            setWeatherHistory((prev) => [
+                {
+                    id: `weather-${createdAt}`,
+                    created_at: createdAt,
+                    weather_data: data,
+                    disaster: false,
+                },
+                ...prev.slice(0, 19),
+            ])
+
             await handleGetRecommendation(data)
         } catch (err) {
             setWeatherAlert(null)
@@ -176,14 +184,21 @@ export default function DashboardPage() {
 
             setRecommendation(responseText)
 
-            // Save to history
+            const createdAt = new Date().toISOString()
             await supabase.from('llm_queries').insert({
                 user_id: user.id,
                 system_prompt: systemPrompt,
                 user_prompt: userPrompt,
                 response: responseText,
             })
-            loadHistory()
+            setLlmHistory((prev) => [
+                {
+                    id: `llm-${createdAt}`,
+                    created_at: createdAt,
+                    response: responseText,
+                },
+                ...prev.slice(0, 19),
+            ])
         } catch (err) {
             toast.error('Error al generar recomendación')
             console.error(err)
