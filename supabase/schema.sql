@@ -51,6 +51,17 @@ CREATE TABLE IF NOT EXISTS public.llm_queries (
 -- ROW LEVEL SECURITY (RLS) — Critical for data protection
 -- ============================================================================
 
+-- Function to check for admin role without triggering infinite recursion
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN
+LANGUAGE sql SECURITY DEFINER SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE user_id = auth.uid() AND role = 'admin'
+  );
+$$;
+
 -- Enable RLS on all tables
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.alerts ENABLE ROW LEVEL SECURITY;
@@ -58,100 +69,108 @@ ALTER TABLE public.weather_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.llm_queries ENABLE ROW LEVEL SECURITY;
 
 -- PROFILES policies
+DROP POLICY IF EXISTS "Users can view own profile" ON public.profiles;
 CREATE POLICY "Users can view own profile"
   ON public.profiles FOR SELECT
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can insert own profile" ON public.profiles;
 CREATE POLICY "Users can insert own profile"
   ON public.profiles FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
 CREATE POLICY "Users can update own profile"
   ON public.profiles FOR UPDATE
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Admins can view all profiles" ON public.profiles;
 CREATE POLICY "Admins can view all profiles"
   ON public.profiles FOR SELECT
   USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles p
-      WHERE p.user_id = auth.uid() AND p.role = 'admin'
-    )
+    public.is_admin()
   );
 
 -- ALERTS policies
+DROP POLICY IF EXISTS "Everyone can view active alerts" ON public.alerts;
 CREATE POLICY "Everyone can view active alerts"
   ON public.alerts FOR SELECT
   USING (active = true);
 
+DROP POLICY IF EXISTS "Admins can view all alerts" ON public.alerts;
 CREATE POLICY "Admins can view all alerts"
   ON public.alerts FOR SELECT
   USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles p
-      WHERE p.user_id = auth.uid() AND p.role = 'admin'
-    )
+    public.is_admin()
   );
 
+DROP POLICY IF EXISTS "Admins can create alerts" ON public.alerts;
 CREATE POLICY "Admins can create alerts"
   ON public.alerts FOR INSERT
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.profiles p
-      WHERE p.user_id = auth.uid() AND p.role = 'admin'
-    )
+    public.is_admin()
   );
 
+DROP POLICY IF EXISTS "Admins can update alerts" ON public.alerts;
 CREATE POLICY "Admins can update alerts"
   ON public.alerts FOR UPDATE
   USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles p
-      WHERE p.user_id = auth.uid() AND p.role = 'admin'
-    )
+    public.is_admin()
   );
 
 -- WEATHER_LOGS policies
+DROP POLICY IF EXISTS "Users can view own weather logs" ON public.weather_logs;
 CREATE POLICY "Users can view own weather logs"
   ON public.weather_logs FOR SELECT
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can insert own weather logs" ON public.weather_logs;
 CREATE POLICY "Users can insert own weather logs"
   ON public.weather_logs FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Admins can view all weather logs" ON public.weather_logs;
 CREATE POLICY "Admins can view all weather logs"
   ON public.weather_logs FOR SELECT
   USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles p
-      WHERE p.user_id = auth.uid() AND p.role = 'admin'
-    )
+    public.is_admin()
   );
 
 -- LLM_QUERIES policies
+DROP POLICY IF EXISTS "Users can view own LLM queries" ON public.llm_queries;
 CREATE POLICY "Users can view own LLM queries"
   ON public.llm_queries FOR SELECT
   USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can insert own LLM queries" ON public.llm_queries;
 CREATE POLICY "Users can insert own LLM queries"
   ON public.llm_queries FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Admins can view all LLM queries" ON public.llm_queries;
 CREATE POLICY "Admins can view all LLM queries"
   ON public.llm_queries FOR SELECT
   USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles p
-      WHERE p.user_id = auth.uid() AND p.role = 'admin'
-    )
+    public.is_admin()
   );
 
 -- ============================================================================
 -- Enable Realtime for alerts table (for live notifications)
 -- ============================================================================
-ALTER PUBLICATION supabase_realtime ADD TABLE public.alerts;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime'
+      AND schemaname = 'public'
+      AND tablename = 'alerts'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.alerts;
+  END IF;
+END
+$$;
 
 -- ============================================================================
 -- Trigger: Auto-create profile on user signup
