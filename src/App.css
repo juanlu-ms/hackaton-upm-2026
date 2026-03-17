@@ -678,6 +678,136 @@
   box-shadow: var(--shadow);
 }
 
+.admin-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.admin-kpi-card {
+  background: linear-gradient(145deg, var(--surface), var(--bg));
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 18px;
+  box-shadow: var(--shadow-sm);
+}
+
+.admin-kpi-label {
+  display: block;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.admin-kpi-value {
+  font-size: 1.9rem;
+  line-height: 1;
+  font-family: var(--font-heading);
+  color: var(--text-primary);
+}
+
+.admin-panels-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.admin-user-metrics {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.admin-user-metric-item {
+  background: var(--bg);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.admin-user-metric-item svg {
+  color: var(--primary);
+}
+
+.admin-user-metric-value {
+  font-family: var(--font-heading);
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.admin-user-metric-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.admin-control-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-panel-subtitle {
+  color: var(--text-secondary);
+  margin: -6px 0 18px;
+}
+
+.admin-control-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.admin-control-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  background: var(--bg);
+  font-size: 0.9rem;
+}
+
+.admin-control-row-column {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.admin-select {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-primary);
+  padding: 10px 12px;
+  font-size: 0.9rem;
+  font-family: var(--font-sans);
+}
+
+.admin-control-row strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.admin-send-button {
+  margin-top: auto;
+  padding-top: 14px;
+  padding-bottom: 14px;
+  font-size: 1rem;
+}
+
 .card-header {
   display: flex;
   align-items: center;
@@ -1114,6 +1244,12 @@ textarea {
 
   .severity-selector {
     flex-direction: column;
+  }
+
+  .admin-kpi-grid,
+  .admin-panels-grid,
+  .admin-user-metrics {
+    grid-template-columns: 1fr;
   }
 }
 
