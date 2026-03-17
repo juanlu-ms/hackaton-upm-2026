@@ -109,3 +109,60 @@ ${JSON.stringify(cleanWeatherData, null, 2)}
 Genera el reporte meteorológico siguiendo estrictamente el formato Markdown indicado en tus instrucciones. 
 Regla vital: NO incluyas ninguna etiqueta XML en tu respuesta final. Comienza directamente con el título de Prioridad.`;
 }
+
+function toNumberOrNull(value) {
+    if (value === null || value === undefined || value === '') return null
+    if (typeof value === 'number') return Number.isFinite(value) ? value : null
+    const normalized = String(value).replace(',', '.').trim()
+    const parsed = Number(normalized)
+    return Number.isFinite(parsed) ? parsed : null
+}
+
+function normalizeAdminWeatherData(weatherData) {
+    return {
+        estacion: weatherData?.nombre || 'Desconocida',
+        provincia: weatherData?.provincia || 'Desconocida',
+        fecha: weatherData?.fecha || null,
+        precipitacion_mm: toNumberOrNull(weatherData?.prec),
+        temperatura_max_c: toNumberOrNull(weatherData?.tmax),
+        temperatura_min_c: toNumberOrNull(weatherData?.tmin),
+        racha_kmh: toNumberOrNull(weatherData?.racha),
+        viento_medio_kmh: toNumberOrNull(weatherData?.velmedia),
+        humedad_max_pct: toNumberOrNull(weatherData?.hrMax),
+        humedad_media_pct: toNumberOrNull(weatherData?.hrMedia),
+        humedad_min_pct: toNumberOrNull(weatherData?.hrMin),
+    }
+}
+
+/**
+ * Build prompt pair for admin alert recommendation using AEMET-like thresholds.
+ */
+export function buildAdminPrompt(weatherData) {
+    const cleanWeatherData = normalizeAdminWeatherData(weatherData)
+
+    const systemPrompt = `Eres un analista meteorológico para el panel de backoffice de Protección Civil.
+Debes decidir si recomendar emitir alerta general y qué nivel sugerir (amarilla, naranja o roja).
+
+Usa esta tabla de umbrales basada en datos AEMET:
+- BAJA: prec < 20 mm, tmax entre 0 y 34 C, tmin >= 0 C y racha < 70 km/h (o null)
+- MEDIA: prec entre 20 y 60 mm, o tmax entre 34 y 39 C, o tmin entre -4 y 0 C, o racha entre 70 y 90 km/h
+- ALTA: prec entre 60 y 100 mm, o tmax entre 39 y 42 C, o tmin entre -8 y -4 C, o racha entre 90 y 130 km/h
+- MUY ALTA: prec > 100 mm, o tmax > 42 C, o tmin < -8 C, o racha > 130 km/h
+
+Nivel final: el mas alto que se cumpla.
+Mapeo de alerta:
+- MEDIA -> Alerta Amarilla
+- ALTA -> Alerta Naranja
+- MUY ALTA -> Alerta Roja
+- BAJA -> Sin alerta / monitorizacion
+
+RESPONDE SIEMPRE en espanol y en formato exacto:
+1) DECISION: una linea que empiece por "⚠️ Se recomienda emitir alerta" o "✅ No se recomienda emitir alerta".
+2) NIVEL RECOMENDADO: [SIN ALERTA/ALERTA AMARILLA/ALERTA NARANJA/ALERTA ROJA]
+3) JUSTIFICACION: 2-3 frases cortas con los valores concretos que activan el nivel.
+4) ACCION OPERATIVA: una frase breve para el administrador.`
+
+    const userPrompt = `Evalua estos datos meteorologicos y recomienda decision operativa para el admin:\n\n${JSON.stringify(cleanWeatherData, null, 2)}`
+
+    return { systemPrompt, userPrompt }
+}

@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
-import { fetchWeather, sendPrompt } from '../../lib/api'
-import { AlertTriangle, Bell, RefreshCw, ShieldCheck, Users, Wind, CloudRain, Accessibility } from 'lucide-react'
+import { fetchWeather, sendPrompt, buildAdminPrompt } from '../../lib/api'
+import { AlertTriangle, Bell, RefreshCw, ShieldCheck, Users, Wind, CloudRain, Accessibility, Thermometer, Droplets } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 function getWindValue(weatherData) {
@@ -137,15 +137,7 @@ export default function BackofficePage() {
                 disaster: false,
             })
 
-            const systemPrompt = `Eres analista de riesgos para un panel de administración de protección civil.
-Responde SIEMPRE en español y con este formato exacto:
-
-1) TITULAR: una línea que empiece por "⚠️ Se recomienda emitir alerta" o "✅ No se recomienda emitir alerta".
-2) MENSAJE: un párrafo corto de 2-3 frases justificando la decisión.
-
-Usa como umbrales de riesgo: lluvia acumulada > 100 mm y/o viento > 60 km/h como riesgo alto.`
-
-            const userPrompt = `Evalúa si el administrador debe emitir una alerta general basándote en estos datos meteorológicos:\n${JSON.stringify(weatherData, null, 2)}`
+            const { systemPrompt, userPrompt } = buildAdminPrompt(weatherData)
 
             const response = await sendPrompt(systemPrompt, userPrompt)
             const responseText =
@@ -171,6 +163,7 @@ Usa como umbrales de riesgo: lluvia acumulada > 100 mm y/o viento > 60 km/h como
     }
 
     const recommendedLevel = useMemo(() => inferSeverityLevel(weather), [weather])
+    const windValue = useMemo(() => getWindValue(weather), [weather])
 
     useEffect(() => {
         setSelectedSeverity(recommendedLevel.severity)
@@ -274,6 +267,62 @@ Usa como umbrales de riesgo: lluvia acumulada > 100 mm y/o viento > 60 km/h como
                 </article>
             </section>
 
+            <section className="dashboard-card">
+                <div className="card-header">
+                    <h2><CloudRain size={22} /> Previsión Meteorológica</h2>
+                    {weatherLoading && (
+                        <span className="dashboard-subtitle">
+                            <RefreshCw size={16} className="spinning" /> Cargando datos...
+                        </span>
+                    )}
+                </div>
+
+                {weather ? (
+                    <div className="weather-display">
+                        <div className="weather-grid">
+                            {weather.tmed !== undefined && weather.tmed !== null && (
+                                <div className="weather-stat">
+                                    <Thermometer size={24} />
+                                    <div>
+                                        <span className="stat-value">{weather.tmed}°C</span>
+                                        <span className="stat-label">Temperatura Med.</span>
+                                    </div>
+                                </div>
+                            )}
+                            {weather.hrMedia !== undefined && weather.hrMedia !== null && (
+                                <div className="weather-stat">
+                                    <Droplets size={24} />
+                                    <div>
+                                        <span className="stat-value">{weather.hrMedia}%</span>
+                                        <span className="stat-label">Humedad</span>
+                                    </div>
+                                </div>
+                            )}
+                            {weather.prec !== undefined && weather.prec !== null && (
+                                <div className="weather-stat">
+                                    <CloudRain size={24} />
+                                    <div>
+                                        <span className="stat-value">{weather.prec} mm</span>
+                                        <span className="stat-label">Precipitación</span>
+                                    </div>
+                                </div>
+                            )}
+                            {windValue !== undefined && windValue !== null && windValue !== '' && (
+                                <div className="weather-stat">
+                                    <Wind size={24} />
+                                    <div>
+                                        <span className="stat-value">{windValue} km/h</span>
+                                        <span className="stat-label">Viento</span>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                ) : (
+                    <p className="empty-state">No hay datos meteorológicos disponibles.</p>
+                )}
+            </section>
+
             <section className="admin-panels-grid">
                 <article className="dashboard-card">
                     <div className="card-header">
@@ -327,7 +376,7 @@ Usa como umbrales de riesgo: lluvia acumulada > 100 mm y/o viento > 60 km/h como
                             <strong>{recommendedLevel.label}</strong>
                         </div>
                         <div className="admin-control-row admin-control-row-column">
-                            <span>Nivel a enviar (editable por admin):</span>
+                            <span>Nivel a enviar:</span>
                             <select
                                 className="admin-select"
                                 value={selectedSeverity}
