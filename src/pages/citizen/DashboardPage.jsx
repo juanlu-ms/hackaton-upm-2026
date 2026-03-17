@@ -13,6 +13,59 @@ import {
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
+function getWindValue(weatherData) {
+    const candidates = [
+        weatherData?.velmedia,
+        weatherData?.vmax,
+        weatherData?.windSpeed,
+        weatherData?.viento,
+    ]
+
+    const windValue = candidates.find((value) => value !== undefined && value !== null && value !== '')
+    return windValue
+}
+
+function buildWeatherAlert(weatherData) {
+    if (!weatherData) return null
+
+    const precipitation = Number(weatherData.prec)
+    const wind = Number(getWindValue(weatherData))
+
+    if (Number.isFinite(precipitation) && precipitation >= 100) {
+        return {
+            severity: 'critical',
+            title: 'Alerta meteorológica por lluvia intensa',
+            description: `La API está devolviendo ${precipitation} mm de precipitación. Evita desplazamientos y revisa zonas inundables.`,
+        }
+    }
+
+    if (Number.isFinite(wind) && wind >= 70) {
+        return {
+            severity: 'critical',
+            title: 'Alerta meteorológica por viento fuerte',
+            description: `La API está devolviendo ${wind} km/h de viento. Evita exteriores y asegura objetos en balcones o terrazas.`,
+        }
+    }
+
+    if (Number.isFinite(precipitation) && precipitation >= 30) {
+        return {
+            severity: 'warning',
+            title: 'Aviso por precipitación elevada',
+            description: `La API está devolviendo ${precipitation} mm de precipitación. Mantente atento a posibles incidencias.`,
+        }
+    }
+
+    if (Number.isFinite(wind) && wind >= 40) {
+        return {
+            severity: 'warning',
+            title: 'Aviso por viento',
+            description: `La API está devolviendo ${wind} km/h de viento. Toma precauciones en exteriores.`,
+        }
+    }
+
+    return null
+}
+
 export default function DashboardPage() {
     const { user, profile } = useAuth()
 
@@ -26,11 +79,13 @@ export default function DashboardPage() {
     const [llmHistory, setLlmHistory] = useState([])
     const [alertHistory, setAlertHistory] = useState([])
     const [expandedRec, setExpandedRec] = useState(null)
+    const [weatherAlert, setWeatherAlert] = useState(null)
 
     // Fetch active alerts on mount + subscribe to realtime
     useEffect(() => {
         loadActiveAlerts()
         loadHistory()
+        handleFetchWeather()
 
         // Realtime subscription for new alerts
         const channel = supabase
@@ -79,21 +134,22 @@ export default function DashboardPage() {
         setAlertHistory(aRes.data || [])
     }
 
-    async function handleFetchWeather(disaster = false) {
+    async function handleFetchWeather() {
         setWeatherLoading(true)
         try {
-            const data = await fetchWeather(disaster)
+            const data = await fetchWeather(false)
             setWeather(data)
+            setWeatherAlert(buildWeatherAlert(data))
 
             // Save to history
             await supabase.from('weather_logs').insert({
                 user_id: user.id,
                 weather_data: data,
-                disaster,
+                disaster: false,
             })
             loadHistory()
-            toast.success('Datos meteorológicos actualizados')
         } catch (err) {
+            setWeatherAlert(null)
             toast.error('Error al obtener datos meteorológicos')
             console.error(err)
         } finally {
@@ -140,6 +196,9 @@ export default function DashboardPage() {
     const severityClass = (s) =>
         s === 'critical' ? 'severity-critical' : s === 'warning' ? 'severity-warning' : 'severity-info'
 
+    const visibleAlerts = weatherAlert ? [weatherAlert, ...alerts] : alerts
+    const windValue = getWindValue(weather)
+
     return (
         <div className="dashboard">
             <div className="dashboard-header">
@@ -152,10 +211,10 @@ export default function DashboardPage() {
             </div>
 
             {/* Active Alerts Banner */}
-            {alerts.length > 0 && (
+            {visibleAlerts.length > 0 && (
                 <div className="alerts-section">
-                    {alerts.map((alert) => (
-                        <div key={alert.id} className={`alert-banner ${severityClass(alert.severity)}`}>
+                    {visibleAlerts.map((alert, index) => (
+                        <div key={alert.id || `weather-alert-${index}`} className={`alert-banner ${severityClass(alert.severity)}`}>
                             <AlertTriangle size={22} />
                             <div className="alert-banner-content">
                                 <strong>{alert.title}</strong>
@@ -171,24 +230,11 @@ export default function DashboardPage() {
             <section className="dashboard-card">
                 <div className="card-header">
                     <h2><CloudRain size={22} /> Previsión Meteorológica</h2>
-                    <div className="card-actions">
-                        <button
-                            className="btn-secondary"
-                            onClick={() => handleFetchWeather(false)}
-                            disabled={weatherLoading}
-                        >
-                            <RefreshCw size={16} className={weatherLoading ? 'spinning' : ''} />
-                            Normal
-                        </button>
-                        <button
-                            className="btn-danger"
-                            onClick={() => handleFetchWeather(true)}
-                            disabled={weatherLoading}
-                        >
-                            <AlertTriangle size={16} />
-                            Desastre
-                        </button>
-                    </div>
+                    {weatherLoading && (
+                        <span className="dashboard-subtitle">
+                            <RefreshCw size={16} className="spinning" /> Cargando datos...
+                        </span>
+                    )}
                 </div>
 
                 {weather ? (
@@ -212,12 +258,12 @@ export default function DashboardPage() {
                                     </div>
                                 </div>
                             )}
-                            {weather.velmedia !== undefined && weather.velmedia !== null && (
+                            {windValue !== undefined && windValue !== null && windValue !== '' && (
                                 <div className="weather-stat">
                                     <Wind size={24} />
                                     <div>
-                                        <span className="stat-value">{weather.velmedia} km/h</span>
-                                        <span className="stat-label">Viento Med.</span>
+                                        <span className="stat-value">{windValue} km/h</span>
+                                        <span className="stat-label">Viento</span>
                                     </div>
                                 </div>
                             )}
@@ -237,9 +283,13 @@ export default function DashboardPage() {
                             <pre>{JSON.stringify(weather, null, 2)}</pre>
                         </details>
                     </div>
+                ) : weatherLoading ? (
+                    <p className="empty-state">
+                        Cargando la previsión meteorológica...
+                    </p>
                 ) : (
                     <p className="empty-state">
-                        Pulsa un botón para obtener la previsión meteorológica actual.
+                        No se han podido cargar los datos meteorológicos.
                     </p>
                 )}
             </section>
