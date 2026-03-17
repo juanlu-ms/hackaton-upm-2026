@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import WeatherDataViewer from '../../components/WeatherDataViewer';
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
 import {
@@ -294,7 +295,9 @@ export default function DashboardPage() {
                         {/* Show full JSON for any extra fields */}
                         <details className="weather-raw">
                             <summary>Ver datos completos</summary>
-                            <pre>{JSON.stringify(weather, null, 2)}</pre>
+                            <div style={{padding: '8px 0'}}>
+                                <WeatherDataViewer data={weather} />
+                            </div>
                         </details>
                     </div>
                 ) : weatherLoading ? (
@@ -375,7 +378,9 @@ export default function DashboardPage() {
                                         </span>
                                         <details>
                                             <summary>Ver datos</summary>
-                                            <pre>{JSON.stringify(w.weather_data, null, 2)}</pre>
+                                            <div style={{padding: '8px 0'}}>
+                                                <WeatherDataViewer data={w.weather_data} />
+                                            </div>
                                         </details>
                                     </div>
                                 ))
