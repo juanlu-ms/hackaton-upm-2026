@@ -3,7 +3,7 @@
  * and prompt engineering utilities.
  */
 
-const API_BASE = 'http://ec2-54-171-51-31.eu-west-1.compute.amazonaws.com'
+const API_BASE = '/api'
 const BEARER_TOKEN = import.meta.env.VITE_BEARER_TOKEN || ''
 
 /**

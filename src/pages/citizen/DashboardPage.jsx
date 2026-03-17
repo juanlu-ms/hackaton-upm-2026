@@ -194,39 +194,39 @@ export default function DashboardPage() {
                 {weather ? (
                     <div className="weather-display">
                         <div className="weather-grid">
-                            {weather.temperature !== undefined && (
+                            {weather.tmed !== undefined && (
                                 <div className="weather-stat">
                                     <Thermometer size={24} />
                                     <div>
-                                        <span className="stat-value">{weather.temperature}°C</span>
-                                        <span className="stat-label">Temperatura</span>
+                                        <span className="stat-value">{weather.tmed}°C</span>
+                                        <span className="stat-label">Temperatura Med.</span>
                                     </div>
                                 </div>
                             )}
-                            {weather.humidity !== undefined && (
+                            {weather.hrMedia !== undefined && (
                                 <div className="weather-stat">
                                     <Droplets size={24} />
                                     <div>
-                                        <span className="stat-value">{weather.humidity}%</span>
+                                        <span className="stat-value">{weather.hrMedia}%</span>
                                         <span className="stat-label">Humedad</span>
                                     </div>
                                 </div>
                             )}
-                            {weather.wind_speed !== undefined && (
+                            {weather.velmedia !== undefined && weather.velmedia !== null && (
                                 <div className="weather-stat">
                                     <Wind size={24} />
                                     <div>
-                                        <span className="stat-value">{weather.wind_speed} km/h</span>
-                                        <span className="stat-label">Viento</span>
+                                        <span className="stat-value">{weather.velmedia} km/h</span>
+                                        <span className="stat-label">Viento Med.</span>
                                     </div>
                                 </div>
                             )}
-                            {weather.visibility !== undefined && (
+                            {weather.prec !== undefined && weather.prec !== null && (
                                 <div className="weather-stat">
-                                    <Eye size={24} />
+                                    <CloudRain size={24} />
                                     <div>
-                                        <span className="stat-value">{weather.visibility} km</span>
-                                        <span className="stat-label">Visibilidad</span>
+                                        <span className="stat-value">{weather.prec} mm</span>
+                                        <span className="stat-label">Precipitación</span>
                                     </div>
                                 </div>
                             )}
