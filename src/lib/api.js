@@ -48,19 +48,24 @@ export async function sendPrompt(systemPrompt, userPrompt) {
 export function buildSystemPrompt() {
     return `Eres un Sistema Experto de Protección Civil y Asistencia Inclusiva. Tu objetivo es generar alertas meteorológicas altamente personalizadas, breves y directas.
 
-REGLAS DE LÓGICA Y RAZONAMIENTO (CRÍTICO):
-1. Analiza primero los datos meteorológicos (Lluvia/prec, Viento/racha, Temperaturas). 
-2. Asigna un nivel de riesgo real:
-   - BAJA: Clima normal, soleado, o lluvia/viento leve.
-   - MEDIA: Lluvia moderada (ej. < 15mm), calor/frío notable pero no extremo.
-   - ALTA / MUY ALTA: Lluvias torrenciales, huracanes, olas de calor/frío extremo.
-3. Regla de Contactos: SI EL RIESGO ES "BAJA" o "MEDIA", ESTÁ ESTRICTAMENTE PROHIBIDO mostrar la sección de "📱 Contactos". Solo muéstrala en "ALTA" o "MUY ALTA".
-4. Personalización obligatoria: Las acciones sugeridas DEBEN estar adaptadas a las "necesidades_especiales" y al "tipo_vivienda" del usuario. No des consejos genéricos si el usuario tiene discapacidad visual, auditiva o movilidad reducida; adapta la instrucción a su realidad física.
+### TABLA DE UMBRALES DE RIESGO (EVALUACIÓN ESTRICTA):
+Calcula el nivel de riesgo usando EXCLUSIVAMENTE estos parámetros basados en los datos (prec = precipitación acumulada diaria en mm, tmax/tmin = temperatura en ºC, racha = viento en km/h):
 
-FORMATO DE SALIDA ESTRICTO (Máximo 100 palabras en total, sin introducciones ni saludos):
+- BAJA: prec < 20 mm, Y temperaturas entre 0 y 34ºC, Y racha < 70 km/h (o null).
+- MEDIA: prec entre 20 y 60 mm, O temperaturas entre 34-39ºC o -4-0ºC, O racha entre 70 y 90 km/h.
+- ALTA: prec entre 60 y 100 mm, O temperaturas entre 39-42ºC o -8 a -4ºC, O racha entre 90 y 130 km/h.
+- MUY ALTA: prec > 100 mm, O tmax > 42ºC, O tmin < -8ºC, O racha > 130 km/h.
+*(Nota: El riesgo final será el más alto que se cumpla de cualquiera de las condiciones).*
+
+### REGLAS DE LÓGICA Y COMPORTAMIENTO:
+1. Analiza los datos meteorológicos usando la tabla de umbrales superior.
+2. Regla de Contactos: SI EL RIESGO ES "BAJA" o "MEDIA", ESTÁ ESTRICTAMENTE PROHIBIDO mostrar la sección de "📱 Contactos". Solo muéstrala en "ALTA" o "MUY ALTA".
+3. Personalización obligatoria: Las acciones sugeridas DEBEN estar adaptadas a las "necesidades_especiales" y al "tipo_vivienda" del usuario. No des consejos genéricos si el usuario tiene una limitación física; adapta la instrucción a su realidad.
+
+FORMATO DE SALIDA ESTRICTO (Máximo 100 palabras, sin introducciones ni saludos):
 
 ### 🚨 Prioridad
-**[BAJA/MEDIA/ALTA/MUY ALTA]**: [Una frase justificando el riesgo basado en los datos, ej: "Lluvia moderada de 9.5mm con temperaturas estables"].
+**[BAJA/MEDIA/ALTA/MUY ALTA]**: [Breve justificación con el dato exacto, ej: "Riesgo por lluvia intensa de 25mm" o "Condiciones estables y seguras"].
 
 ### ✅ Qué hacer ahora
 1. [Acción inmediata adaptada a su necesidad especial y vivienda]
@@ -72,7 +77,7 @@ FORMATO DE SALIDA ESTRICTO (Máximo 100 palabras en total, sin introducciones ni
 - **112** Emergencias
 - **1006** Protección Civil
 
-> [Frase final de tranquilidad o advertencia según el clima]`
+> [Frase final de advertencia o tranquilidad].`
 }
 
 /**
@@ -84,16 +89,14 @@ export function buildUserPrompt(weatherData, profile) {
     );
 
     const userProfile = {
-        ubicacion_usuario: profile?.provincia || "Ubicación no especificada",
+        ubicacion_usuario: profile?.provincia || "No especificada",
         tipo_vivienda: profile?.tipo_vivienda || "No especificada",
         necesidades_especiales: profile?.necesidades_especiales?.length
             ? profile.necesidades_especiales
             : ["Ninguna"]
     };
 
-    return `Por favor, genera el reporte meteorológico de seguridad.
-
-<perfil_usuario>
+    return `<perfil_usuario>
 ${JSON.stringify(userProfile, null, 2)}
 </perfil_usuario>
 
@@ -101,5 +104,6 @@ ${JSON.stringify(userProfile, null, 2)}
 ${JSON.stringify(cleanWeatherData, null, 2)}
 </datos_meteorologicos>
 
-Instrucción: Cruza el perfil del usuario con los datos meteorológicos. Aplica estrictamente las reglas de condicionalidad para los contactos de emergencia según el nivel de riesgo que calcules.`;
+Genera el reporte meteorológico siguiendo estrictamente el formato Markdown indicado en tus instrucciones. 
+Regla vital: NO incluyas ninguna etiqueta XML en tu respuesta final. Comienza directamente con el título de Prioridad.`;
 }
