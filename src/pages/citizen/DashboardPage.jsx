@@ -12,6 +12,7 @@ import {
     Thermometer, Wind, Droplets, Eye, MapPin, ChevronDown, ChevronUp,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import ReactMarkdown from 'react-markdown'
 
 function getWindValue(weatherData) {
     const candidates = [
@@ -148,6 +149,8 @@ export default function DashboardPage() {
                 disaster: false,
             })
             loadHistory()
+            // Auto-generate AI recommendation right after loading weather
+            await handleGetRecommendation(data)
         } catch (err) {
             setWeatherAlert(null)
             toast.error('Error al obtener datos meteorológicos')
@@ -157,16 +160,13 @@ export default function DashboardPage() {
         }
     }
 
-    async function handleGetRecommendation() {
-        if (!weather) {
-            toast.error('Primero obtén los datos meteorológicos')
-            return
-        }
+    async function handleGetRecommendation(weatherData) {
+        if (!weatherData) return
 
         setRecLoading(true)
         try {
             const systemPrompt = buildSystemPrompt()
-            const userPrompt = buildUserPrompt(weather, profile)
+            const userPrompt = buildUserPrompt(weatherData, profile)
             const response = await sendPrompt(systemPrompt, userPrompt)
 
             const responseText =
@@ -184,7 +184,6 @@ export default function DashboardPage() {
                 response: responseText,
             })
             loadHistory()
-            toast.success('Recomendación generada')
         } catch (err) {
             toast.error('Error al generar recomendación')
             console.error(err)
@@ -297,33 +296,23 @@ export default function DashboardPage() {
             {/* AI Recommendation Section */}
             <section className="dashboard-card recommendation-card">
                 <div className="card-header">
-                    <h2><Brain size={22} /> Recomendación IA Personalizada</h2>
-                    <button
-                        className="btn-primary"
-                        onClick={handleGetRecommendation}
-                        disabled={recLoading || !weather}
-                    >
-                        {recLoading ? (
-                            <>
-                                <RefreshCw size={16} className="spinning" /> Analizando...
-                            </>
-                        ) : (
-                            '🤖 Pedir Recomendación'
-                        )}
-                    </button>
+                    <h2><Brain size={22} /> Recomendación IA</h2>
+                    {recLoading && (
+                        <span className="dashboard-subtitle">
+                            <RefreshCw size={16} className="spinning" /> Analizando...
+                        </span>
+                    )}
                 </div>
 
                 {recommendation ? (
                     <div className="recommendation-content">
-                        <div className="recommendation-text" style={{ whiteSpace: 'pre-wrap' }}>
-                            {recommendation}
+                        <div className="recommendation-text recommendation-markdown">
+                            <ReactMarkdown>{recommendation}</ReactMarkdown>
                         </div>
                     </div>
                 ) : (
                     <p className="empty-state">
-                        {weather
-                            ? 'Pulsa el botón para obtener recomendaciones personalizadas basadas en tu perfil.'
-                            : 'Primero obtén los datos meteorológicos.'}
+                        {recLoading ? 'Generando recomendación con IA...' : 'Sin datos disponibles.'}
                     </p>
                 )}
             </section>
