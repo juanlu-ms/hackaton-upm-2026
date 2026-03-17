@@ -43,32 +43,11 @@ export function AuthProvider({ children }) {
             try {
                 // Listen for auth changes
                 const { data } = supabase.auth.onAuthStateChange(
-                    async (event, session) => {
+                    async (_event, session) => {
                         setLoading(true) // Ensure children wait during auth transitions
                         setUser(session?.user ?? null)
                         if (session?.user) {
-                            const fetchedProfile = await fetchProfile(session.user.id)
-
-                            // After Google OAuth: if a role was chosen before redirecting,
-                            // and the profile is brand-new (trigger just ran, no provincia set),
-                            // apply the stored role to the DB row.
-                            if (event === 'SIGNED_IN') {
-                                const pendingRole = sessionStorage.getItem('pending_role')
-                                if (pendingRole && (!fetchedProfile || !fetchedProfile.provincia)) {
-                                    sessionStorage.removeItem('pending_role')
-                                    try {
-                                        const { data: updated, error: roleError } = await supabase
-                                            .from('profiles')
-                                            .update({ role: pendingRole, updated_at: new Date().toISOString() })
-                                            .eq('user_id', session.user.id)
-                                            .select()
-                                            .single()
-                                        if (!roleError && updated) setProfile(updated)
-                                    } catch (_) {
-                                        // Non-critical: role update failed silently
-                                    }
-                                }
-                            }
+                            await fetchProfile(session.user.id)
                         } else {
                             setProfile(null)
                         }

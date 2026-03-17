@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { Shield, ShieldCheck, Brain, Eye, Users, ShieldAlert } from 'lucide-react'
+import { Shield, ShieldCheck, Brain, Eye } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 export default function RegisterPage() {
@@ -11,7 +11,6 @@ export default function RegisterPage() {
     const [fullName, setFullName] = useState('')
     const [showPassword, setShowPassword] = useState(false)
     const [loading, setLoading] = useState(false)
-    const [role, setRole] = useState('citizen')
     const { signUp, signInWithGoogle } = useAuth()
     const navigate = useNavigate()
 
@@ -31,7 +30,7 @@ export default function RegisterPage() {
         try {
             const result = await signUp(email, password, {
                 full_name: fullName,
-                role,
+                role: 'citizen',
             })
 
             if (result?.session) {
@@ -51,8 +50,6 @@ export default function RegisterPage() {
 
     async function handleGoogleRegister() {
         try {
-            // Store chosen role so AuthContext can apply it after OAuth redirect
-            sessionStorage.setItem('pending_role', role)
             await signInWithGoogle()
         } catch (err) {
             toast.error(err.message || 'Error con Google')
@@ -105,26 +102,6 @@ export default function RegisterPage() {
                     <p className="auth-form-sub">
                         Regístrate para recibir protección personalizada
                     </p>
-
-                    {/* Role selector */}
-                    <div className="role-tabs">
-                        <button
-                            type="button"
-                            className={`role-tab ${role === 'citizen' ? 'active' : ''}`}
-                            onClick={() => setRole('citizen')}
-                        >
-                            <Users size={14} style={{ display: 'inline', marginRight: 6 }} />
-                            Ciudadano
-                        </button>
-                        <button
-                            type="button"
-                            className={`role-tab ${role === 'admin' ? 'active' : ''}`}
-                            onClick={() => setRole('admin')}
-                        >
-                            <ShieldAlert size={14} style={{ display: 'inline', marginRight: 6 }} />
-                            Administrador
-                        </button>
-                    </div>
 
                     <div className="form-group">
                         <label htmlFor="fullName">Nombre Completo</label>
