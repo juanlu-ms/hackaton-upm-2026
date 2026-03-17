@@ -26,44 +26,41 @@ export function AuthProvider({ children }) {
     useEffect(() => {
         let subscription = null
 
-        async function init() {
-            try {
-                // Get initial session
-                const { data: { session } } = await supabase.auth.getSession()
-                setUser(session?.user ?? null)
-                if (session?.user) {
-                    await fetchProfile(session.user.id)
-                }
-            } catch (err) {
-                console.warn('Auth init error (Supabase not configured?):', err.message)
-            } finally {
-                setLoading(false)
-            }
+        // Safety net: if loading never resolves (network error, etc.), force it off after 10s
+        const safetyTimeout = setTimeout(() => {
+            setLoading(false)
+        }, 10000)
 
-            try {
-                // Listen for auth changes
-                const { data } = supabase.auth.onAuthStateChange(
-                    async (_event, session) => {
-                        setLoading(true) // Ensure children wait during auth transitions
-                        setUser(session?.user ?? null)
+        try {
+            // onAuthStateChange fires INITIAL_SESSION immediately on mount,
+            // so we don't need a separate getSession() call. This avoids the
+            // race condition where init() and the listener both toggle loading.
+            const { data } = supabase.auth.onAuthStateChange(
+                async (_event, session) => {
+                    setUser(session?.user ?? null)
+                    try {
                         if (session?.user) {
                             await fetchProfile(session.user.id)
                         } else {
                             setProfile(null)
                         }
+                    } catch (err) {
+                        console.error('Error fetching profile in auth change:', err.message)
+                    } finally {
+                        clearTimeout(safetyTimeout)
                         setLoading(false)
                     }
-                )
-                subscription = data?.subscription
-            } catch (err) {
-                console.warn('Auth listener error:', err.message)
-                setLoading(false)
-            }
+                }
+            )
+            subscription = data?.subscription
+        } catch (err) {
+            console.warn('Auth listener setup error:', err.message)
+            clearTimeout(safetyTimeout)
+            setLoading(false)
         }
 
-        init()
-
         return () => {
+            clearTimeout(safetyTimeout)
             if (subscription) subscription.unsubscribe()
         }
     }, [])
@@ -88,21 +85,12 @@ export function AuthProvider({ children }) {
 
     /** Sign in with email + password */
     async function signIn(email, password) {
-        setLoading(true)
-        try {
-            const { data, error } = await supabase.auth.signInWithPassword({
-                email,
-                password,
-            })
-            if (error) throw error
-            if (data?.user) {
-                setUser(data.user)
-                await fetchProfile(data.user.id)
-            }
-            return data
-        } finally {
-            setLoading(false)
-        }
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+        })
+        if (error) throw error
+        return data
     }
 
     /** Sign in with Google OAuth */
